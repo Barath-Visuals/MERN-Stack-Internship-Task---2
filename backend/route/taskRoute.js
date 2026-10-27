@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const Task = require("../models/Task")
 
 const router = express.Router();
@@ -38,5 +39,71 @@ router.post("/add", async (req, res) => {
         });
     }
 });
+
+router.post("/update/:id", async (req, res) => {
+    try{
+        const {id} = req.params;
+        const {text} = req.body;
+
+        if(!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                message: "Invalid task ID",
+            })
+        }
+
+        if(typeof text !== "string" || !text.trim()) {
+            return res.status(400).json({
+                message: "task cannot be empty",
+            })
+        }
+
+        const updatedTask = await Task.findByIdAndUpdate(
+            id,
+            {text: text.trim()},
+            {new: true, runValidators: true}
+        );
+
+        if(!updatedTask) {
+            return res.status(404).json({
+                message: "task not found",
+            })
+        }
+        res.status(200).json(updatedTask);
+    } catch (error) {
+        res.status(500).json({
+            message: "failed to update task",
+            error: error.message,
+        })
+    }
+});
+
+router.delete("/delete/:id", async (req, res) => {
+    try{
+        const {id} = req.params;
+
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({
+                message: "Invalid task ID",
+            })
+        }
+
+        const deletedTask = await Task.findByIdAndDelete(id);
+
+        if(!deletedTask){
+            return res.status(404).json({
+                message: "task not found",
+            })
+        }
+        res.status(200).json({
+            message: "task deleted successfully",
+            id: deletedTask._id,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "failed to delete task",
+            error: error.message,
+        })
+    }
+})
 
 module.exports = router;
